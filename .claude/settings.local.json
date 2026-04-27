@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(brew --version)",
+      "Bash(/opt/homebrew/bin/brew --version)",
+      "Bash(/opt/homebrew/bin/brew install *)",
+      "Bash(export PATH=\"/opt/homebrew/bin:$PATH\")",
+      "Bash(npm --version)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -f \"server/index.js\")",
+      "Bash(curl -s http://localhost:3001/api/claude -X POST -H \"content-type: application/json\" -d '{}')",
+      "Bash(node --input-type=module)"
+    ]
+  }
+}
