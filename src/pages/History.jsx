@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Utensils, Droplets, Moon, ChevronDown, ChevronUp, Dumbbell } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Utensils, Droplets, Moon, ChevronDown, ChevronUp, Dumbbell, Timer } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 import { todayMT } from '../utils/dateUtils.js'
@@ -73,8 +73,9 @@ export default function History() {
   const todayStr = todayMT()
   const [view, setView] = useState({ year: now.getFullYear(), month: now.getMonth() })
   const [selected, setSelected] = useState(todayStr)
-  const [sleepExpanded, setSleepExpanded] = useState(false)
-  const [waterExpanded, setWaterExpanded] = useState(false)
+  const [sleepExpanded,   setSleepExpanded]   = useState(false)
+  const [waterExpanded,   setWaterExpanded]   = useState(false)
+  const [fastingExpanded, setFastingExpanded] = useState(false)
 
   const { year, month } = view
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -100,11 +101,32 @@ export default function History() {
   }
 
   // Selected day data
-  const foodEntries = userData.foodLog[selected] || []
-  const waterOz = userData.waterLog[selected] || 0
-  const sleep = userData.sleepLog[selected]
-  const exercised = !!(userData.exerciseLog || {})[selected]
-  const totalCals = foodEntries.reduce((s, e) => s + (e.calories || 0), 0)
+  const foodEntries  = userData.foodLog[selected] || []
+  const waterOz      = userData.waterLog[selected] || 0
+  const sleep        = userData.sleepLog[selected]
+  const exercised    = !!(userData.exerciseLog || {})[selected]
+  const totalCals    = foodEntries.reduce((s, e) => s + (e.calories || 0), 0)
+
+  const fastingLog   = userData.fastingLog || []
+
+  function fastDateMT(isoStr) {
+    return new Date(isoStr).toLocaleDateString('en-CA', { timeZone: 'America/Denver' })
+  }
+
+  const fastingForDay = fastingLog.filter(e => (e.date || fastDateMT(e.endTime)) === selected)
+
+  // Precompute set of dates with fasts for calendar dots
+  const fastingDates = new Set(fastingLog.map(e => e.date || fastDateMT(e.endTime)))
+
+  function formatFastDuration(ms) {
+    const h = Math.floor(ms / 3600000)
+    const m = Math.floor((ms % 3600000) / 60000)
+    return m === 0 ? `${h}h` : `${h}h ${m}m`
+  }
+
+  function getFastingHistory() {
+    return [...fastingLog].sort((a, b) => b.startTime.localeCompare(a.startTime)).slice(0, 30)
+  }
 
   // Multi-day history helpers (last 30 days, only days with data)
   function getSleepHistory() {
@@ -173,10 +195,11 @@ export default function History() {
               const isToday = year === todayY && month === todayM && day === todayD
               const isFuture = dateStr > todayStr
               const isSelected = dateStr === selected
-              const hasFood = (userData.foodLog[dateStr] || []).length > 0
-              const hasWater = (userData.waterLog[dateStr] || 0) > 0
-              const hasSleep = !!userData.sleepLog[dateStr]
+              const hasFood     = (userData.foodLog[dateStr] || []).length > 0
+              const hasWater    = (userData.waterLog[dateStr] || 0) > 0
+              const hasSleep    = !!userData.sleepLog[dateStr]
               const hasExercise = !!(userData.exerciseLog || {})[dateStr]
+              const hasFasting  = fastingDates.has(dateStr)
 
               return (
                 <button
@@ -204,6 +227,7 @@ export default function History() {
                     {hasWater    && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
                     {hasSleep    && <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />}
                     {hasExercise && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                    {hasFasting  && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />}
                   </div>
                 </button>
               )
@@ -223,6 +247,9 @@ export default function History() {
             </span>
             <span className="flex items-center gap-1 text-xs text-gray-400">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Exercise
+            </span>
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-orange-400 inline-block" /> Fasting
             </span>
           </div>
         </div>
@@ -271,6 +298,74 @@ export default function History() {
             <p className={`text-sm mt-1 font-medium ${exercised ? 'text-emerald-600' : 'text-gray-400'}`}>
               {exercised ? '✓ 30+ minutes logged' : 'Not logged'}
             </p>
+          </section>
+
+          {/* Fasting */}
+          <section>
+            <button
+              className="w-full flex items-center justify-between mb-2"
+              onClick={() => setFastingExpanded(v => !v)}
+            >
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                <Timer size={14} className="text-orange-400" /> Fasting
+                {fastingForDay.length > 0 && (
+                  <span className="text-sm font-bold text-orange-500 ml-1">
+                    {fastingForDay.length} fast{fastingForDay.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-400">
+                {!fastingExpanded && <span>History</span>}
+                {fastingExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </div>
+            </button>
+
+            {!fastingExpanded && (
+              fastingForDay.length === 0 ? (
+                <p className="text-xs text-gray-400">No fasts logged</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {fastingForDay.map(entry => (
+                    <div key={entry.id} className="rounded-lg px-3 py-2 bg-orange-50">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-orange-500">{entry.protocol}</span>
+                        <span className="text-xs font-semibold text-gray-700">{formatFastDuration(entry.durationMs)}</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {new Date(entry.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        {' → '}
+                        {new Date(entry.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {fastingExpanded && (() => {
+              const history = getFastingHistory()
+              if (!history.length) return <p className="text-xs text-gray-400">No fasts logged yet.</p>
+              return (
+                <div className="space-y-2">
+                  {history.map(entry => (
+                    <div key={entry.id} className="border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-semibold text-gray-500">
+                          {new Date(entry.endTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-xs font-bold text-orange-500">{entry.protocol}</span>
+                        <span className="text-xs font-semibold text-gray-700">{formatFastDuration(entry.durationMs)}</span>
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        {new Date(entry.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        {' → '}
+                        {new Date(entry.endTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
           </section>
 
           {/* Water */}

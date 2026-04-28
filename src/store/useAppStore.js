@@ -33,6 +33,7 @@ const defaultUserData = (profile) => ({
   exerciseLog: {},
   fastingProtocol: profile.sex === 'female' ? '14:10' : '16:8',
   fastingStart: null,
+  fastingLog: [],
 })
 
 const useAppStore = create(
@@ -116,7 +117,25 @@ const useAppStore = create(
       startFast: (user) =>
         get()._updateUser(user, (u) => ({ ...u, fastingStart: new Date().toISOString() })),
       stopFast: (user) =>
-        get()._updateUser(user, (u) => ({ ...u, fastingStart: null })),
+        get()._updateUser(user, (u) => {
+          if (!u.fastingStart) return u
+          const endTime = new Date().toISOString()
+          const durationMs = new Date(endTime).getTime() - new Date(u.fastingStart).getTime()
+          const date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' })
+          const entry = { id: Date.now(), protocol: u.fastingProtocol, startTime: u.fastingStart, endTime, durationMs, date }
+          return { ...u, fastingStart: null, fastingLog: [...(u.fastingLog || []), entry] }
+        }),
+      addPastFast: (user, entry) =>
+        get()._updateUser(user, (u) => ({
+          ...u,
+          fastingLog: [...(u.fastingLog || []), { ...entry, id: Date.now() }]
+            .sort((a, b) => b.startTime.localeCompare(a.startTime)),
+        })),
+      deleteFastEntry: (user, id) =>
+        get()._updateUser(user, (u) => ({
+          ...u,
+          fastingLog: (u.fastingLog || []).filter(e => e.id !== id),
+        })),
 
       // Cycle (hers only)
       setCycleData: (updates) =>
