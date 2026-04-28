@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Utensils, Droplets, Moon, ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Utensils, Droplets, Moon, ChevronDown, ChevronUp, Dumbbell } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 import { todayMT } from '../utils/dateUtils.js'
@@ -103,6 +103,7 @@ export default function History() {
   const foodEntries = userData.foodLog[selected] || []
   const waterOz = userData.waterLog[selected] || 0
   const sleep = userData.sleepLog[selected]
+  const exercised = !!(userData.exerciseLog || {})[selected]
   const totalCals = foodEntries.reduce((s, e) => s + (e.calories || 0), 0)
 
   // Multi-day history helpers (last 30 days, only days with data)
@@ -175,6 +176,7 @@ export default function History() {
               const hasFood = (userData.foodLog[dateStr] || []).length > 0
               const hasWater = (userData.waterLog[dateStr] || 0) > 0
               const hasSleep = !!userData.sleepLog[dateStr]
+              const hasExercise = !!(userData.exerciseLog || {})[dateStr]
 
               return (
                 <button
@@ -198,9 +200,10 @@ export default function History() {
                     {day}
                   </div>
                   <div className="flex gap-0.5 h-1.5 items-center">
-                    {hasFood  && <div className="w-1.5 h-1.5 rounded-full bg-green-400" />}
-                    {hasWater && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
-                    {hasSleep && <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+                    {hasFood     && <div className="w-1.5 h-1.5 rounded-full bg-green-400" />}
+                    {hasWater    && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                    {hasSleep    && <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+                    {hasExercise && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
                   </div>
                 </button>
               )
@@ -208,7 +211,7 @@ export default function History() {
           </div>
 
           {/* Legend */}
-          <div className="flex justify-center gap-4 py-2.5 border-t border-gray-100">
+          <div className="flex justify-center gap-3 py-2.5 border-t border-gray-100 flex-wrap">
             <span className="flex items-center gap-1 text-xs text-gray-400">
               <span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> Food
             </span>
@@ -217,6 +220,9 @@ export default function History() {
             </span>
             <span className="flex items-center gap-1 text-xs text-gray-400">
               <span className="w-2 h-2 rounded-full bg-indigo-400 inline-block" /> Sleep
+            </span>
+            <span className="flex items-center gap-1 text-xs text-gray-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Exercise
             </span>
           </div>
         </div>
@@ -255,6 +261,16 @@ export default function History() {
                 </div>
               </div>
             )}
+          </section>
+
+          {/* Exercise */}
+          <section>
+            <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+              <Dumbbell size={14} className="text-emerald-500" /> Exercise
+            </div>
+            <p className={`text-sm mt-1 font-medium ${exercised ? 'text-emerald-600' : 'text-gray-400'}`}>
+              {exercised ? '✓ 30+ minutes logged' : 'Not logged'}
+            </p>
           </section>
 
           {/* Water */}

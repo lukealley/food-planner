@@ -30,6 +30,7 @@ const defaultUserData = (profile) => ({
   waterGoalOz: 64,
   waterLog: {},
   sleepLog: {},
+  exerciseLog: {},
   fastingProtocol: profile.sex === 'female' ? '14:10' : '16:8',
   fastingStart: null,
 })
@@ -100,6 +101,13 @@ const useAppStore = create(
         get()._updateUser(user, (u) => ({
           ...u,
           sleepLog: { ...u.sleepLog, [date]: entry },
+        })),
+
+      // Exercise
+      toggleExercise: (user, date) =>
+        get()._updateUser(user, (u) => ({
+          ...u,
+          exerciseLog: { ...u.exerciseLog, [date]: !u.exerciseLog[date] },
         })),
 
       // Fasting

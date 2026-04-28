@@ -7,6 +7,7 @@ import WaterCard from '../components/WaterCard'
 import SleepCard from '../components/SleepCard'
 import FastingCard from '../components/FastingCard'
 import CycleTracker from '../components/CycleTracker'
+import ExerciseCard from '../components/ExerciseCard'
 
 import { todayMT } from '../utils/dateUtils.js'
 const todayStr = todayMT
@@ -109,9 +110,10 @@ export default function Dashboard() {
           {/* Cycle tracker — hers only */}
           {activeUser === 'hers' && <CycleTracker />}
 
-          {/* Water, Sleep, Fasting */}
+          {/* Water, Sleep, Exercise, Fasting */}
           <WaterCard />
           <SleepCard />
+          <ExerciseCard />
           <FastingCard />
 
           {/* Today's log */}
