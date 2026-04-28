@@ -5,6 +5,7 @@ import { themes } from '../themes'
 
 import { todayMT, yesterdayMT } from '../utils/dateUtils.js'
 import { celebrate } from '../utils/celebrate.js'
+import { goalCelebrate, sleepGoalHours } from '../utils/goalCelebrate.js'
 const todayStr  = todayMT
 const yesterStr = yesterdayMT
 
@@ -93,7 +94,9 @@ export default function SleepCard() {
       sleepAidOther: sleepAid === 'other' ? sleepAidOther : '',
     })
     setExpanded(false)
-    celebrate()
+    const effective = +(calcHours(bedtime, waketime) - wake / 60).toFixed(1)
+    if (effective >= sleepGoalHours(users[activeUser].profile)) goalCelebrate()
+    else celebrate()
   }
 
   async function toggleNotification() {

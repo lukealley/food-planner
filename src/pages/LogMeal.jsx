@@ -6,6 +6,7 @@ import { themes } from '../themes'
 import { callClaude } from '../utils/claudeApi'
 import { todayMT, prevDay, nextDay, friendlyDate } from '../utils/dateUtils.js'
 import { celebrate } from '../utils/celebrate.js'
+import { goalCelebrate } from '../utils/goalCelebrate.js'
 
 const todayStr = todayMT
 const nowTime  = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -232,14 +233,22 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
   }
 
   function logEntry(entry) {
+    const { foodLog, calorieGoal } = users[activeUser]
+    const prevTotal = (foodLog[logDate] || []).reduce((s, e) => s + (e.calories || 0), 0)
     addFoodEntry(activeUser, logDate, { ...entry, time: nowTime() })
     setResults([]); setQuery(''); setBarcodeResult(null); setAiResult(null)
     setManualEntry({ name: '', calories: '', protein: '', carbs: '', fat: '', fiber: '' })
-    celebrate()
+    if (prevTotal < calorieGoal && prevTotal + (entry.calories || 0) >= calorieGoal) goalCelebrate()
+    else celebrate()
   }
 
   function logSelected() {
     if (!describeResult || selected.size === 0) return
+    const { foodLog, calorieGoal } = users[activeUser]
+    const prevTotal = (foodLog[logDate] || []).reduce((s, e) => s + (e.calories || 0), 0)
+    const addedCals = describeResult.items
+      .filter((_, i) => selected.has(i))
+      .reduce((s, item) => s + (item.calories || 0), 0)
     const time = nowTime()
     describeResult.items.forEach((item, i) => {
       if (selected.has(i)) addFoodEntry(activeUser, logDate, { ...item, time })
@@ -247,7 +256,8 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
     setDescription('')
     setDescribeResult(null)
     setSelected(new Set())
-    celebrate()
+    if (prevTotal < calorieGoal && prevTotal + addedCals >= calorieGoal) goalCelebrate()
+    else celebrate()
   }
 
   function toggleItem(i) {

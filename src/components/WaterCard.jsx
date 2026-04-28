@@ -4,6 +4,7 @@ import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 import { todayMT, prevDay, nextDay, friendlyDate } from '../utils/dateUtils.js'
 import { celebrate } from '../utils/celebrate.js'
+import { goalCelebrate } from '../utils/goalCelebrate.js'
 
 const QUICK_ADD = [8, 12, 16, 24]
 const todayStr = todayMT
@@ -80,7 +81,12 @@ export default function WaterCard() {
         {QUICK_ADD.map((oz_) => (
           <button
             key={oz_}
-            onClick={() => { addWater(activeUser, logDate, oz_); celebrate() }}
+            onClick={() => {
+              const prev = waterLog[logDate] || 0
+              addWater(activeUser, logDate, oz_)
+              if (prev < waterGoalOz && prev + oz_ >= waterGoalOz) goalCelebrate()
+              else celebrate()
+            }}
             className="flex-1 text-xs font-semibold py-1.5 rounded-lg transition-colors"
             style={{ background: '#dbeafe', color: '#1d4ed8' }}
           >
