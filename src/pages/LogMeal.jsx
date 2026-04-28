@@ -5,6 +5,7 @@ import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 import { callClaude } from '../utils/claudeApi'
 import { todayMT, prevDay, nextDay, friendlyDate } from '../utils/dateUtils.js'
+import { celebrate } from '../utils/celebrate.js'
 
 const todayStr = todayMT
 const nowTime  = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -233,25 +234,20 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
   function logEntry(entry) {
     addFoodEntry(activeUser, logDate, { ...entry, time: nowTime() })
     setResults([]); setQuery(''); setBarcodeResult(null); setAiResult(null)
-    setManualEntry({ name: '', calories: '', protein: '', carbs: '', fat: '' })
-    alert(`Logged: ${entry.name} (${entry.calories} cal) for ${friendlyDate(logDate)}`)
+    setManualEntry({ name: '', calories: '', protein: '', carbs: '', fat: '', fiber: '' })
+    celebrate()
   }
 
   function logSelected() {
     if (!describeResult || selected.size === 0) return
     const time = nowTime()
     describeResult.items.forEach((item, i) => {
-      if (selected.has(i)) {
-        addFoodEntry(activeUser, logDate, { ...item, time })
-      }
+      if (selected.has(i)) addFoodEntry(activeUser, logDate, { ...item, time })
     })
-    const total = describeResult.items
-      .filter((_, i) => selected.has(i))
-      .reduce((s, item) => s + item.calories, 0)
     setDescription('')
     setDescribeResult(null)
     setSelected(new Set())
-    alert(`Logged ${selected.size} item${selected.size !== 1 ? 's' : ''} — ${total} cal total`)
+    celebrate()
   }
 
   function toggleItem(i) {

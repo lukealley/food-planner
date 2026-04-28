@@ -4,6 +4,7 @@ import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 
 import { todayMT, yesterdayMT } from '../utils/dateUtils.js'
+import { celebrate } from '../utils/celebrate.js'
 const todayStr  = todayMT
 const yesterStr = yesterdayMT
 
@@ -92,6 +93,7 @@ export default function SleepCard() {
       sleepAidOther: sleepAid === 'other' ? sleepAidOther : '',
     })
     setExpanded(false)
+    celebrate()
   }
 
   async function toggleNotification() {

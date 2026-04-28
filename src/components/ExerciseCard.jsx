@@ -3,6 +3,7 @@ import { Dumbbell, ChevronLeft, ChevronRight } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 import { todayMT, prevDay, nextDay, friendlyDate } from '../utils/dateUtils.js'
+import { celebrate } from '../utils/celebrate.js'
 
 export default function ExerciseCard() {
   const { activeUser, users, toggleExercise } = useAppStore()
@@ -50,7 +51,7 @@ export default function ExerciseCard() {
 
       {/* Checkbox row */}
       <button
-        onClick={() => toggleExercise(activeUser, logDate)}
+        onClick={() => { toggleExercise(activeUser, logDate); if (!done) celebrate() }}
         className="w-full flex items-center gap-3 rounded-xl px-4 py-3 transition-colors"
         style={{
           background: done ? (activeUser === 'hers' ? '#dcfce7' : '#dcfce7') : '#f9fafb',
