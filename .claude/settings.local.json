@@ -14,7 +14,10 @@
       "Bash(pkill -f \"vite\")",
       "Bash(pkill -f \"server/index.js\")",
       "Bash(curl -s http://localhost:3001/api/claude -X POST -H \"content-type: application/json\" -d '{}')",
-      "Bash(node --input-type=module)"
+      "Bash(node --input-type=module)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

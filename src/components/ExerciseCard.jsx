@@ -7,7 +7,7 @@ import { todayMT, prevDay, nextDay, friendlyDate } from '../utils/dateUtils.js'
 export default function ExerciseCard() {
   const { activeUser, users, toggleExercise } = useAppStore()
   const t = themes[activeUser]
-  const { exerciseLog } = users[activeUser]
+  const exerciseLog = users[activeUser].exerciseLog || {}
 
   const [logDate, setLogDate] = useState(todayMT())
   const isToday = logDate === todayMT()

@@ -107,7 +107,7 @@ const useAppStore = create(
       toggleExercise: (user, date) =>
         get()._updateUser(user, (u) => ({
           ...u,
-          exerciseLog: { ...u.exerciseLog, [date]: !u.exerciseLog[date] },
+          exerciseLog: { ...(u.exerciseLog || {}), [date]: !(u.exerciseLog || {})[date] },
         })),
 
       // Fasting
