@@ -76,7 +76,7 @@ export default function LogMeal() {
   const [barcodeResult, setBarcodeResult] = useState(null)
 
   // Manual state
-  const [manualEntry, setManualEntry] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' })
+  const [manualEntry, setManualEntry] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '', fiber: '' })
 
   // Describe (AI free-text) state
   const [description, setDescription]   = useState('')
@@ -274,6 +274,7 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
       protein:  scale(labelResult.protein),
       carbs:    scale(labelResult.carbs),
       fat:      scale(labelResult.fat),
+      fiber:    scale(labelResult.fiber),
     })
     setLabelResult(null)
     setLabelName('')
@@ -709,7 +710,7 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
             <input placeholder="Food name" className="input" value={manualEntry.name}
               onChange={e => setManualEntry(p => ({ ...p, name: e.target.value }))} />
             <div className="grid grid-cols-2 gap-3">
-              {['calories','protein','carbs','fat'].map(field => (
+              {['calories','protein','carbs','fat','fiber'].map(field => (
                 <input key={field}
                   placeholder={`${field.charAt(0).toUpperCase() + field.slice(1)}${field !== 'calories' ? ' (g)' : ''}`}
                   type="number" className="input" value={manualEntry[field]}
@@ -723,6 +724,7 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
                 protein:  Number(manualEntry.protein),
                 carbs:    Number(manualEntry.carbs),
                 fat:      Number(manualEntry.fat),
+                fiber:    Number(manualEntry.fiber),
               })}
               className="w-full font-semibold py-3 rounded-2xl text-white"
               style={{ background: t.buttonBg }}

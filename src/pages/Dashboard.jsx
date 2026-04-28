@@ -21,6 +21,10 @@ export default function Dashboard() {
   const entries  = foodLog[todayStr()] || []
   const consumed = entries.reduce((s, e) => s + (e.calories || 0), 0)
   const protein  = entries.reduce((s, e) => s + (e.protein  || 0), 0)
+  const fiber    = entries.reduce((s, e) => s + (e.fiber    || 0), 0)
+
+  const proteinGoal = calcProteinGoal(profile)
+  const fiberGoal   = calcFiberGoal(profile)
 
   const firstName = profile.name?.split(' ')[0] || (activeUser === 'his' ? 'Luke' : 'Love')
 
@@ -62,8 +66,9 @@ export default function Dashboard() {
             }}
           >
             <CalorieRing consumed={consumed} goal={calorieGoal} theme={t} />
-            <div className="flex gap-3 mt-4 flex-wrap justify-center">
-              <MacroPill label="Protein" value={`${protein}g`} t={t} />
+            <div className="w-full mt-4 space-y-2.5">
+              <MacroBar label="Protein" value={protein} goal={proteinGoal} color={t.accent} unit="g" />
+              <MacroBar label="Fiber"   value={fiber}   goal={fiberGoal}   color="#f59e0b" unit="g" />
             </div>
           </div>
 
@@ -155,14 +160,38 @@ export default function Dashboard() {
   )
 }
 
-function MacroPill({ label, value, t }) {
+const PROTEIN_MULT = { sedentary: 0.36, light: 0.5, moderate: 0.6, active: 0.7, very_active: 0.8 }
+
+function calcProteinGoal(profile) {
+  const weight = parseFloat(profile.currentWeight) || parseFloat(profile.goalWeight) || 150
+  const mult = PROTEIN_MULT[profile.activityLevel] || 0.6
+  return Math.round(weight * mult)
+}
+
+function calcFiberGoal(profile) {
+  const age = parseFloat(profile.age) || 30
+  if (profile.sex === 'male') return age >= 50 ? 30 : 38
+  return age >= 50 ? 21 : 25
+}
+
+function MacroBar({ label, value, goal, color, unit }) {
+  const pct = goal > 0 ? Math.min(value / goal, 1) : 0
+  const over = value > goal && goal > 0
   return (
-    <span
-      className="px-3 py-1 rounded-full text-xs font-medium"
-      style={{ background: t.accentLight, color: t.accentText }}
-    >
-      {label}: {value}
-    </span>
+    <div>
+      <div className="flex justify-between items-baseline mb-1">
+        <span className="text-xs font-semibold text-gray-500">{label}</span>
+        <span className="text-xs font-medium" style={{ color: over ? '#ef4444' : color }}>
+          {value}{unit} <span className="text-gray-300">/</span> {goal}{unit}
+        </span>
+      </div>
+      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct * 100}%`, background: over ? '#ef4444' : color }}
+        />
+      </div>
+    </div>
   )
 }
 
