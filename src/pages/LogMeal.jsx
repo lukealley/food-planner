@@ -53,7 +53,7 @@ export default function LogMeal() {
   const t = themes[activeUser]
 
   const [params] = useSearchParams()
-  const [mode, setMode] = useState(params.get('mode') || 'search')
+  const [mode, setMode] = useState(params.get('mode') || 'describe')
   const [logDate, setLogDate] = useState(params.get('date') || todayStr())
 
   // Search state
@@ -287,9 +287,10 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
     setServings('1')
   }
 
-  const modes = [['search','Search'], ['describe','Describe'], ['label','Label'], ['photo','Photo'], ['barcode','Barcode'], ['manual','Manual']]
+  const secondaryModes = [['search','Search'], ['label','Label'], ['photo','Photo'], ['barcode','Barcode'], ['manual','Manual']]
 
-  const inactiveBg = t.headerBg === '#0d1f0d' ? '#1a3a1a' : '#6b3a45'
+  const inactiveBg  = t.headerBg === '#0d1f0d' ? '#1a3a1a' : '#6b3a45'
+  const inactiveSm  = 'rgba(255,255,255,0.12)'
 
   return (
     <div className="pb-28">
@@ -330,15 +331,29 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
           )}
         </div>
 
-        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 -mx-1 px-1">
-          {modes.map(([m, label]) => (
+        {/* Primary: Describe button */}
+        <button
+          onClick={() => setMode('describe')}
+          className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-base transition-colors"
+          style={mode === 'describe'
+            ? { background: t.accent, color: t.headerBg }
+            : { background: 'rgba(255,255,255,0.18)', color: '#fff' }
+          }
+        >
+          <Sparkles size={18} />
+          Describe what you ate
+        </button>
+
+        {/* Secondary: smaller options */}
+        <div className="flex gap-1.5 mt-2">
+          {secondaryModes.map(([m, label]) => (
             <button
               key={m}
               onClick={() => setMode(m)}
-              className="px-3 py-1 rounded-full text-sm font-medium transition-colors whitespace-nowrap"
+              className="flex-1 py-1.5 rounded-xl text-xs font-semibold transition-colors"
               style={mode === m
                 ? { background: t.accent, color: t.headerBg }
-                : { background: inactiveBg, color: '#fff' }
+                : { background: inactiveSm, color: 'rgba(255,255,255,0.75)' }
               }
             >
               {label}
