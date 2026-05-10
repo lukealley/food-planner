@@ -8,6 +8,7 @@ import History from './pages/History'
 import DinnerDatabase from './pages/DinnerDatabase'
 import Profile from './pages/Profile'
 import MealSuggestions from './pages/MealSuggestions'
+import CorCard from './pages/CorCard'
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/dinners"     element={<DinnerDatabase />} />
           <Route path="/profile"     element={<Profile />} />
           <Route path="/suggestions" element={<MealSuggestions />} />
+          <Route path="/corcard"     element={<CorCard />} />
         </Routes>
         <BottomNav />
       </div>

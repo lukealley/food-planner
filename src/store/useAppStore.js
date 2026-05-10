@@ -34,6 +34,7 @@ const defaultUserData = (profile) => ({
   fastingProtocol: profile.sex === 'female' ? '14:10' : '16:8',
   fastingStart: null,
   fastingLog: [],
+  corCardLog: {},
 })
 
 const useAppStore = create(
@@ -136,6 +137,19 @@ const useAppStore = create(
           ...u,
           fastingLog: (u.fastingLog || []).filter(e => e.id !== id),
         })),
+
+      // Cor-Card
+      updateCorCard: (user, date, key, updates) =>
+        get()._updateUser(user, (u) => {
+          const dayLog = (u.corCardLog || {})[date] || {}
+          return {
+            ...u,
+            corCardLog: {
+              ...(u.corCardLog || {}),
+              [date]: { ...dayLog, [key]: { ...(dayLog[key] || { text: '', done: false }), ...updates } },
+            },
+          }
+        }),
 
       // Cycle (hers only)
       setCycleData: (updates) =>

@@ -1,13 +1,13 @@
 import { NavLink } from 'react-router-dom'
-import { Home, UtensilsCrossed, CalendarDays, ShoppingBag, User } from 'lucide-react'
+import { Home, UtensilsCrossed, CalendarDays, ShoppingBag, User, Brain } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 
 const tabs = [
   { to: '/',         icon: Home,            label: 'Today'   },
   { to: '/log',      icon: UtensilsCrossed, label: 'Log'     },
+  { to: '/corcard',  icon: Brain,           label: 'Cor-Card' },
   { to: '/history',  icon: CalendarDays,    label: 'History' },
-  { to: '/dinners',  icon: ShoppingBag,     label: 'Dinners' },
   { to: '/profile',  icon: User,            label: 'Profile' },
 ]
 
