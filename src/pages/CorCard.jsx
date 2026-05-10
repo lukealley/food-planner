@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   MessageCircle, Star, Dumbbell, Heart, Sun, Users,
-  BookOpen, Smile, Utensils, Zap, X, ChevronLeft, ChevronRight, Info,
+  BookOpen, Smile, Utensils, Zap, X, ChevronLeft, Info,
 } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
@@ -135,6 +135,29 @@ export default function CorCard() {
   const completedCount = ITEMS.filter(item => getItem(item.key).done).length
   const pct = Math.round((completedCount / ITEMS.length) * 100)
 
+  // Build 7-day strip: today and the 6 days before it
+  function nDaysAgo(n) {
+    let d = todayMT()
+    for (let i = 0; i < n; i++) d = prevDay(d)
+    return d
+  }
+  const sevenDays = Array.from({ length: 7 }, (_, i) => nDaysAgo(6 - i))
+
+  function dayPct(dateStr) {
+    const dl = (userData.corCardLog || {})[dateStr] || {}
+    const done = ITEMS.filter(item => (dl[item.key] || {}).done).length
+    return Math.round((done / ITEMS.length) * 100)
+  }
+
+  function dayAbbrev(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2)
+  }
+
+  function dayNum(dateStr) {
+    return parseInt(dateStr.split('-')[2])
+  }
+
   const accent = '#7c3aed'
 
   return (
@@ -156,37 +179,88 @@ export default function CorCard() {
           </button>
         </div>
 
-        {/* Date navigator */}
-        <div className="flex items-center gap-2 mt-3">
+        {/* 7-day strip */}
+        <div className="flex gap-1 mt-3">
+          {/* Older-days arrow */}
           <button
             onClick={() => setLogDate(d => prevDay(d))}
-            className="p-1.5 rounded-lg"
-            style={{ background: 'rgba(255,255,255,0.2)' }}
+            className="flex items-center justify-center w-7 shrink-0 rounded-xl"
+            style={{ background: 'rgba(255,255,255,0.15)' }}
           >
-            <ChevronLeft size={16} className="text-white" />
+            <ChevronLeft size={14} className="text-white" />
           </button>
-          <span className="flex-1 text-center text-sm font-semibold py-1.5 rounded-lg text-white"
-            style={{ background: 'rgba(255,255,255,0.15)' }}>
-            {friendlyDate(logDate)}
-          </span>
-          <button
-            onClick={() => setLogDate(d => nextDay(d))}
-            disabled={isToday}
-            className="p-1.5 rounded-lg disabled:opacity-30"
-            style={{ background: 'rgba(255,255,255,0.2)' }}
-          >
-            <ChevronRight size={16} className="text-white" />
-          </button>
-          {!isToday && (
+
+          {sevenDays.map(dateStr => {
+            const p       = dayPct(dateStr)
+            const isSelected = dateStr === logDate
+            const isTdy  = dateStr === todayMT()
+            const radius = 16
+            const circ   = 2 * Math.PI * radius
+            const dash   = (p / 100) * circ
+            const color  = p === 100 ? '#4ade80' : p > 0 ? '#c4b5fd' : 'rgba(255,255,255,0.3)'
+
+            return (
+              <button
+                key={dateStr}
+                onClick={() => setLogDate(dateStr)}
+                className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all"
+                style={{ background: isSelected ? 'rgba(255,255,255,0.22)' : 'transparent' }}
+              >
+                {/* Day abbrev */}
+                <span className="text-purple-200 leading-none" style={{ fontSize: '10px' }}>
+                  {dayAbbrev(dateStr)}
+                </span>
+
+                {/* SVG ring with date number inside */}
+                <div className="relative flex items-center justify-center" style={{ width: 38, height: 38 }}>
+                  <svg width="38" height="38" style={{ position: 'absolute', top: 0, left: 0 }}>
+                    {/* Background ring */}
+                    <circle cx="19" cy="19" r={radius} fill="none"
+                      stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+                    {/* Progress arc */}
+                    {p > 0 && (
+                      <circle cx="19" cy="19" r={radius} fill="none"
+                        stroke={color} strokeWidth="3"
+                        strokeDasharray={`${dash} ${circ}`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 19 19)"
+                      />
+                    )}
+                  </svg>
+                  <span
+                    className="font-bold relative z-10"
+                    style={{
+                      fontSize: 13,
+                      color: isSelected ? '#fff' : isTdy ? '#e9d5ff' : 'rgba(255,255,255,0.7)',
+                    }}
+                  >
+                    {dayNum(dateStr)}
+                  </span>
+                </div>
+
+                {/* Pct label */}
+                <span
+                  className="font-semibold leading-none"
+                  style={{ fontSize: '9px', color: p === 100 ? '#4ade80' : 'rgba(255,255,255,0.6)' }}
+                >
+                  {p > 0 ? `${p}%` : '—'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Selected day label */}
+        <p className="text-center text-xs text-purple-200 mt-1.5">
+          {friendlyDate(logDate)}{!isToday && (
             <button
               onClick={() => setLogDate(todayMT())}
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-purple-700"
-              style={{ background: '#fff' }}
+              className="ml-2 text-white font-semibold underline underline-offset-2"
             >
-              Today
+              → Today
             </button>
           )}
-        </div>
+        </p>
 
         {/* Progress bar */}
         <div className="mt-3">
