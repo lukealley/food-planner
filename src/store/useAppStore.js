@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { DEFAULT_WEIGHTS } from '../utils/score.js'
 
 const defaultHisProfile = {
   name: 'Luke',
@@ -35,6 +36,7 @@ const defaultUserData = (profile) => ({
   fastingStart: null,
   fastingLog: [],
   corCardLog: {},
+  scoreWeights: { ...DEFAULT_WEIGHTS },
 })
 
 const useAppStore = create(
@@ -137,6 +139,10 @@ const useAppStore = create(
           ...u,
           fastingLog: (u.fastingLog || []).filter(e => e.id !== id),
         })),
+
+      // Score weights
+      setScoreWeights: (user, weights) =>
+        get()._updateUser(user, (u) => ({ ...u, scoreWeights: weights })),
 
       // Cor-Card
       updateCorCard: (user, date, key, updates) =>

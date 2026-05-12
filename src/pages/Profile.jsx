@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 import { callClaude } from '../utils/claudeApi'
+import { CATEGORY_META, DEFAULT_WEIGHTS } from '../utils/score'
 
 const ACTIVITY = [
   { value: 'sedentary',   label: 'Sedentary (desk job, little exercise)' },
@@ -264,6 +265,11 @@ function ProfileForm({ user, t }) {
         )}
       </Field>
 
+      {/* Score weights */}
+      <div className="rounded-2xl p-4 border border-gray-100 bg-gray-50">
+        <ScoreWeightsEditor user={user} t={t} />
+      </div>
+
       <button
         onClick={handleSave}
         className="w-full font-semibold py-3 rounded-2xl transition-colors text-white"
@@ -271,6 +277,111 @@ function ProfileForm({ user, t }) {
       >
         {saved ? 'Saved!' : 'Save Profile'}
       </button>
+    </div>
+  )
+}
+
+function ScoreWeightsEditor({ user, t }) {
+  const { users, setScoreWeights } = useAppStore()
+  const saved = users[user].scoreWeights || DEFAULT_WEIGHTS
+  const [weights, setWeights] = useState({ ...saved })
+  const [savedOk, setSavedOk] = useState(false)
+  const isHers = user === 'hers'
+
+  const total = Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0)
+  const isValid = total === 100
+
+  function update(key, raw) {
+    const val = Math.max(0, Math.min(100, Number(raw) || 0))
+    setWeights(w => ({ ...w, [key]: val }))
+  }
+
+  function normalize() {
+    const sum = Object.values(weights).reduce((s, v) => s + (Number(v) || 0), 0)
+    if (!sum) return
+    const factor = 100 / sum
+    const normalized = {}
+    const keys = Object.keys(weights)
+    let runningTotal = 0
+    keys.forEach((k, i) => {
+      if (i === keys.length - 1) {
+        normalized[k] = 100 - runningTotal
+      } else {
+        normalized[k] = Math.round((Number(weights[k]) || 0) * factor)
+        runningTotal += normalized[k]
+      }
+    })
+    setWeights(normalized)
+  }
+
+  function save() {
+    setScoreWeights(user, weights)
+    setSavedOk(true)
+    setTimeout(() => setSavedOk(false), 2000)
+  }
+
+  const labelColor = isHers ? '#9b6b75' : '#6b7280'
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide mb-0.5" style={{ color: labelColor }}>
+          Score Weights
+        </p>
+        <p className="text-xs text-gray-400 mb-3">
+          Set what % each category contributes to your daily score. Must total 100.
+        </p>
+      </div>
+
+      {CATEGORY_META.map(({ key, label, color }) => (
+        <div key={key} className="flex items-center gap-3">
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+          <span className="text-sm text-gray-600 w-24 shrink-0">{label}</span>
+          <input
+            type="range" min={0} max={100} step={5}
+            value={weights[key] ?? 0}
+            onChange={e => update(key, e.target.value)}
+            className="flex-1 accent-indigo-500"
+          />
+          <div className="flex items-center gap-1 w-14 shrink-0">
+            <input
+              type="number" min={0} max={100}
+              value={weights[key] ?? 0}
+              onChange={e => update(key, e.target.value)}
+              className="w-10 text-right text-sm font-semibold border border-gray-200 rounded-lg px-1 py-0.5"
+              style={{ color: isValid ? '#374151' : '#ef4444' }}
+            />
+            <span className="text-xs text-gray-400">%</span>
+          </div>
+        </div>
+      ))}
+
+      {/* Total indicator */}
+      <div className="flex items-center justify-between pt-1 border-t border-gray-100">
+        <span className="text-sm font-semibold text-gray-500">Total</span>
+        <span className="text-sm font-bold" style={{ color: isValid ? '#22c55e' : '#ef4444' }}>
+          {total}% {!isValid && `(need ${100 - total > 0 ? '+' : ''}${100 - total} more)`}
+        </span>
+      </div>
+
+      <div className="flex gap-2">
+        {!isValid && (
+          <button
+            onClick={normalize}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600"
+          >
+            Auto-balance to 100
+          </button>
+        )}
+        <button
+          onClick={save}
+          disabled={!isValid}
+          className="flex-1 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-40 transition-colors"
+          style={{ background: t.buttonBg }}
+        >
+          {savedOk ? '✓ Saved!' : 'Save Weights'}
+        </button>
+      </div>
     </div>
   )
 }
