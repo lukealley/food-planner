@@ -9,12 +9,14 @@ import DinnerDatabase from './pages/DinnerDatabase'
 import Profile from './pages/Profile'
 import MealSuggestions from './pages/MealSuggestions'
 import CorCard from './pages/CorCard'
+import StreakBadge from './components/StreakBadge'
 
 export default function App() {
   return (
     <BrowserRouter>
       <div className="max-w-md mx-auto min-h-screen bg-gray-50">
         <ProfileSwitcher />
+        <StreakBadge />
         <Routes>
           <Route path="/"            element={<Dashboard />} />
           <Route path="/log"         element={<LogMeal />} />
