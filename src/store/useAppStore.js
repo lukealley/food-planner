@@ -38,6 +38,7 @@ const defaultUserData = (profile) => ({
   corCardLog: {},
   scoreWeights: { ...DEFAULT_WEIGHTS },
   streakLog: {},
+  weightLog: {},   // { 'YYYY-MM-DD': lbs }
 })
 
 const useAppStore = create(
@@ -140,6 +141,18 @@ const useAppStore = create(
           ...u,
           fastingLog: (u.fastingLog || []).filter(e => e.id !== id),
         })),
+
+      // Weight
+      logWeight: (user, date, lbs) =>
+        get()._updateUser(user, (u) => ({
+          ...u,
+          weightLog: { ...(u.weightLog || {}), [date]: lbs },
+        })),
+      deleteWeight: (user, date) =>
+        get()._updateUser(user, (u) => {
+          const { [date]: _, ...rest } = (u.weightLog || {})
+          return { ...u, weightLog: rest }
+        }),
 
       // Streak check-in
       checkInStreak: (user) => {
