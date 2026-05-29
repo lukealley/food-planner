@@ -4,13 +4,25 @@ import { todayMT, prevDay } from '../utils/dateUtils'
 
 // ─── Streak calculation ───────────────────────────────────────────────────────
 
-function computeStreak(streakLog) {
-  if (!streakLog) return 0
+// A day counts as "active" if the user explicitly checked in OR logged anything
+function wasActiveOnDay(userData, dateStr) {
+  if ((userData.streakLog || {})[dateStr]) return true
+  if ((userData.foodLog?.[dateStr] || []).length > 0) return true
+  if ((userData.waterLog?.[dateStr] || 0) > 0) return true
+  if (userData.sleepLog?.[dateStr]) return true
+  if ((userData.exerciseLog || {})[dateStr]) return true
+  const ccDay = (userData.corCardLog || {})[dateStr] || {}
+  if (Object.values(ccDay).some(v => v?.done)) return true
+  if ((userData.fastingLog || []).some(e => e.date === dateStr)) return true
+  return false
+}
+
+function computeStreak(userData) {
   let count = 0
   let d = todayMT()
-  // Grace: if today not checked in, start from yesterday so badge shows ongoing streak
-  if (!streakLog[d]) d = prevDay(d)
-  while (streakLog[d]) {
+  // Grace: if nothing logged today yet, check from yesterday so streak stays alive
+  if (!wasActiveOnDay(userData, d)) d = prevDay(d)
+  while (wasActiveOnDay(userData, d)) {
     count++
     d = prevDay(d)
   }
@@ -205,10 +217,9 @@ function DowntonBanner({ streak, onClose }) {
 
 export default function StreakBadge() {
   const { activeUser, users, checkInStreak } = useAppStore()
-  const userData  = users[activeUser]
-  const streakLog = userData.streakLog || {}
-  const streak    = computeStreak(streakLog)
-  const checkedInToday = !!streakLog[todayMT()]
+  const userData       = users[activeUser]
+  const streak         = computeStreak(userData)
+  const checkedInToday = wasActiveOnDay(userData, todayMT())
 
   const [showBanner, setShowBanner] = useState(false)
   const closeBanner = useCallback(() => setShowBanner(false), [])
