@@ -29,7 +29,7 @@ const QUOTES = [
   '"The staff are most impressed."',
   '"Carson would be proud."',
   '"Lady Mary would approve."',
-  '"You honour Downton Abbey."',
+  '"You honour Downpound Alley."',
   '"Perfectly splendid."',
   '"Rather extraordinary."',
   '"Quite remarkable, my lord."',
@@ -100,7 +100,7 @@ function DowntonBanner({ streak, onClose }) {
           fontFamily: 'Georgia, "Times New Roman", serif',
           marginBottom: 4,
         }}>
-          DOWNTON ABBEY
+          DOWNPOUND ALLEY
         </div>
 
         {/* Ornamental rule */}
