@@ -5,12 +5,13 @@ export default function CalorieRing({ consumed, goal, burned = 0 }) {
   const activeUser = useAppStore(s => s.activeUser)
   const t = themes[activeUser]
 
-  const pct  = Math.min(consumed / goal, 1)
+  const net  = Math.max(consumed - burned, 0)
+  const pct  = Math.min(net / goal, 1)
   const r    = 54
   const circ = 2 * Math.PI * r
   const dash = circ * pct
-  const remaining = Math.max(goal - consumed, 0)
-  const over = consumed > goal
+  const remaining = Math.max(goal - net, 0)
+  const over = net > goal
 
   return (
     <div className="flex flex-col items-center">
