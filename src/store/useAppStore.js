@@ -111,10 +111,26 @@ const useAppStore = create(
 
       // Exercise
       toggleExercise: (user, date) =>
-        get()._updateUser(user, (u) => ({
-          ...u,
-          exerciseLog: { ...(u.exerciseLog || {}), [date]: !(u.exerciseLog || {})[date] },
-        })),
+        get()._updateUser(user, (u) => {
+          const existing = (u.exerciseLog || {})[date]
+          const isDone = existing === true || (existing && typeof existing === 'object' && existing.done)
+          const newVal = isDone
+            ? false
+            : { done: true, description: '', caloriesBurned: null }
+          return { ...u, exerciseLog: { ...(u.exerciseLog || {}), [date]: newVal } }
+        }),
+      logExerciseDetails: (user, date, { description, caloriesBurned }) =>
+        get()._updateUser(user, (u) => {
+          const existing = (u.exerciseLog || {})[date]
+          const base = existing === true ? { done: true } : (existing || { done: true })
+          return {
+            ...u,
+            exerciseLog: {
+              ...(u.exerciseLog || {}),
+              [date]: { ...base, description, caloriesBurned },
+            },
+          }
+        }),
 
       // Fasting
       setFastingProtocol: (user, protocol) =>

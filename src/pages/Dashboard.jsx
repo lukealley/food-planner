@@ -24,6 +24,10 @@ export default function Dashboard() {
   const protein  = entries.reduce((s, e) => s + (e.protein  || 0), 0)
   const fiber    = entries.reduce((s, e) => s + (e.fiber    || 0), 0)
 
+  // Calories burned from exercise log (supports both legacy boolean and new object shape)
+  const exEntry       = (userData.exerciseLog || {})[todayStr()]
+  const caloriesBurned = (exEntry && typeof exEntry === 'object' && exEntry.caloriesBurned) || 0
+
   const proteinGoal = calcProteinGoal(profile)
   const fiberGoal   = calcFiberGoal(profile)
 
@@ -66,7 +70,7 @@ export default function Dashboard() {
               border: activeUser === 'hers' ? `1px solid ${t.cardBorder}` : 'none',
             }}
           >
-            <CalorieRing consumed={consumed} goal={calorieGoal} theme={t} />
+            <CalorieRing consumed={consumed} goal={calorieGoal} burned={caloriesBurned} theme={t} />
             <div className="w-full mt-4 space-y-2.5">
               <MacroBar label="Protein" value={protein} goal={proteinGoal} color={t.accent} unit="g" />
               <MacroBar label="Fiber"   value={fiber}   goal={fiberGoal}   color="#f59e0b" unit="g" />

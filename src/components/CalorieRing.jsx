@@ -1,7 +1,7 @@
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 
-export default function CalorieRing({ consumed, goal }) {
+export default function CalorieRing({ consumed, goal, burned = 0 }) {
   const activeUser = useAppStore(s => s.activeUser)
   const t = themes[activeUser]
 
@@ -30,9 +30,12 @@ export default function CalorieRing({ consumed, goal }) {
           <span className="text-xs text-gray-500">{over ? 'over' : 'left'}</span>
         </div>
       </div>
-      <div className="flex gap-6 mt-2 text-sm text-gray-500">
+      <div className="flex gap-5 mt-2 text-sm text-gray-500 flex-wrap justify-center">
         <span><span className="font-semibold text-gray-800">{consumed}</span> eaten</span>
         <span><span className="font-semibold text-gray-800">{goal}</span> goal</span>
+        {burned > 0 && (
+          <span><span className="font-semibold" style={{ color: '#f97316' }}>{burned}</span> burned</span>
+        )}
       </div>
     </div>
   )
