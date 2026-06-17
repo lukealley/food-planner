@@ -12,12 +12,12 @@ const todayStr = todayMT
 const nowTime  = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
 const STARTER_FOODS = [
-  { name: 'Banana', calories: 105, protein: 1, carbs: 27, fat: 0 },
-  { name: 'Greek Yogurt (1 cup)', calories: 130, protein: 17, carbs: 9, fat: 0 },
-  { name: 'Chicken Breast (4oz)', calories: 185, protein: 35, carbs: 0, fat: 4 },
-  { name: 'Brown Rice (1 cup)', calories: 215, protein: 5, carbs: 45, fat: 2 },
-  { name: 'Eggs (2 large)', calories: 143, protein: 13, carbs: 1, fat: 10 },
-  { name: 'Almonds (1oz)', calories: 164, protein: 6, carbs: 6, fat: 14 },
+  { name: 'Banana', calories: 105, protein: 1, carbs: 27, fat: 0, fiber: 3 },
+  { name: 'Greek Yogurt (1 cup)', calories: 130, protein: 17, carbs: 9, fat: 0, fiber: 0 },
+  { name: 'Chicken Breast (4oz)', calories: 185, protein: 35, carbs: 0, fat: 4, fiber: 0 },
+  { name: 'Brown Rice (1 cup)', calories: 215, protein: 5, carbs: 45, fat: 2, fiber: 4 },
+  { name: 'Eggs (2 large)', calories: 143, protein: 13, carbs: 1, fat: 10, fiber: 0 },
+  { name: 'Almonds (1oz)', calories: 164, protein: 6, carbs: 6, fat: 14, fiber: 3 },
 ]
 
 // Scans the entire food log and returns foods sorted by use frequency (most used first).
@@ -103,6 +103,7 @@ export default function LogMeal() {
           protein:  Math.round(p.nutriments.proteins_100g || 0),
           carbs:    Math.round(p.nutriments.carbohydrates_100g || 0),
           fat:      Math.round(p.nutriments.fat_100g || 0),
+          fiber:    Math.round(p.nutriments.fiber_100g || 0),
         }))
       setResults(items.length ? items : QUICK_FOODS.filter(f => f.name.toLowerCase().includes(q.toLowerCase())))
     } catch {
@@ -125,6 +126,7 @@ export default function LogMeal() {
           protein:  Math.round(p.nutriments?.proteins_serving || p.nutriments?.proteins_100g || 0),
           carbs:    Math.round(p.nutriments?.carbohydrates_serving || p.nutriments?.carbohydrates_100g || 0),
           fat:      Math.round(p.nutriments?.fat_serving || p.nutriments?.fat_100g || 0),
+          fiber:    Math.round(p.nutriments?.fiber_serving || p.nutriments?.fiber_100g || 0),
         })
       } else {
         alert('Product not found. Try searching by name.')
@@ -144,7 +146,7 @@ export default function LogMeal() {
         max_tokens: 300,
         messages: [{ role: 'user', content: [
           { type: 'image', source: { type: 'base64', media_type: file.type, data: base64.split(',')[1] } },
-          { type: 'text', text: 'Estimate the calories and macros for this meal. Reply with ONLY valid JSON: {"name":"...","calories":0,"protein":0,"carbs":0,"fat":0,"notes":"..."}' }
+          { type: 'text', text: 'Estimate the calories and macros for this meal. Reply with ONLY valid JSON: {"name":"...","calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"notes":"..."}' }
         ]}]
       })
       const text = data.content?.[0]?.text || ''
@@ -215,7 +217,7 @@ What they ate:
 Reply with ONLY valid JSON in exactly this format — no extra text:
 {
   "items": [
-    { "name": "Food name with portion", "calories": 0, "protein": 0, "carbs": 0, "fat": 0 }
+    { "name": "Food name with portion", "calories": 0, "protein": 0, "carbs": 0, "fat": 0, "fiber": 0 }
   ],
   "notes": "One sentence of context or caveats if needed"
 }`,
@@ -470,6 +472,7 @@ Reply with ONLY valid JSON in exactly this format — no extra text:
                         <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
                         <p className="text-xs text-gray-400">
                           {item.protein}g protein · {item.carbs}g carbs · {item.fat}g fat
+                          {item.fiber > 0 ? ` · ${item.fiber}g fiber` : ''}
                         </p>
                       </div>
                       <span className="font-bold text-sm shrink-0" style={{ color: t.accent }}>
@@ -772,7 +775,10 @@ function FoodCard({ food, onLog, t, count }) {
           )}
         </div>
         {food.brand && <p className="text-xs text-gray-400">{food.brand}</p>}
-        <p className="text-xs text-gray-500 mt-0.5">{food.protein}g protein · {food.carbs}g carbs · {food.fat}g fat</p>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {food.protein}g protein · {food.carbs}g carbs · {food.fat}g fat
+          {food.fiber > 0 ? ` · ${food.fiber}g fiber` : ''}
+        </p>
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <span className="font-bold" style={{ color: t.accent }}>{food.calories}</span>
