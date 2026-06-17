@@ -50,6 +50,7 @@ export default function SleepCard() {
   const [napMinutes,   setNapMinutes]   = useState('')
   const [sleepAid,     setSleepAid]     = useState('none')
   const [sleepAidOther, setSleepAidOther] = useState('')
+  const [sleepWithMary, setSleepWithMary] = useState(false)
   const [notifStatus,  setNotifStatus]  = useState(
     () => localStorage.getItem('sleep-notif') || 'off'
   )
@@ -92,6 +93,7 @@ export default function SleepCard() {
       napMinutes: parseInt(napMinutes) || 0,
       sleepAid,
       sleepAidOther: sleepAid === 'other' ? sleepAidOther : '',
+      ...(activeUser === 'his' ? { sleepWithMary } : {}),
     })
     setExpanded(false)
     const effective = +(calcHours(bedtime, waketime) - wake / 60).toFixed(1)
@@ -204,7 +206,12 @@ export default function SleepCard() {
           </div>
           <div className="flex justify-between text-xs mt-1">
             <span className="text-indigo-400">{effectiveHours}h effective sleep</span>
-            {avg && <span className="text-gray-400">avg {avg}h</span>}
+            <div className="flex items-center gap-2">
+              {activeUser === 'his' && lastNightEntry?.sleepWithMary && (
+                <span className="text-indigo-400">🌙 with Mary</span>
+              )}
+              {avg && <span className="text-gray-400">avg {avg}h</span>}
+            </div>
           </div>
         </div>
       )}
@@ -309,6 +316,33 @@ export default function SleepCard() {
               />
             )}
           </div>
+
+          {/* Sleep with Mary — his only */}
+          {activeUser === 'his' && (
+            <button
+              type="button"
+              onClick={() => setSleepWithMary(v => !v)}
+              className="w-full flex items-center gap-3 rounded-xl px-4 py-3 transition-colors text-left"
+              style={{
+                background: sleepWithMary ? '#eef2ff' : '#f9fafb',
+                border: `2px solid ${sleepWithMary ? '#6366f1' : '#e5e7eb'}`,
+              }}
+            >
+              <div
+                className="w-5 h-5 rounded flex items-center justify-center shrink-0 transition-colors"
+                style={{ background: sleepWithMary ? '#6366f1' : '#fff', border: `2px solid ${sleepWithMary ? '#6366f1' : '#d1d5db'}` }}
+              >
+                {sleepWithMary && (
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </div>
+              <span className="text-sm font-medium" style={{ color: sleepWithMary ? '#4338ca' : '#374151' }}>
+                Did you go to sleep with Mary?
+              </span>
+            </button>
+          )}
 
           {/* Summary */}
           <div className="bg-indigo-50 rounded-xl px-3 py-2">
