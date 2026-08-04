@@ -388,26 +388,31 @@ export default function Budget() {
   const [uploadError,  setUploadError]  = useState('')
   const [reviewIds,    setReviewIds]    = useState(null) // Set of IDs to review
   const [synced,       setSynced]       = useState(false)
+  const [syncStatus,   setSyncStatus]   = useState('loading') // 'loading'|'ok'|'error'
   const fileRef = useRef()
 
   // On mount: pull remote budget and merge into local store
   useEffect(() => {
     fetch('/api/budget')
-      .then(r => r.ok ? r.json() : null)
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
       .then(remote => { if (remote) mergeBudget(remote) })
-      .catch(() => {})
+      .catch(() => setSyncStatus('error'))
       .finally(() => setSynced(true))
   }, []) // eslint-disable-line
 
   // After any budget change (post-sync): push full state to server (debounced)
   useEffect(() => {
     if (!synced) return
+    setSyncStatus('loading')
     const timer = setTimeout(() => {
       fetch('/api/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(budget),
-      }).catch(() => {})
+      })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
+        .then(() => setSyncStatus('ok'))
+        .catch(() => setSyncStatus('error'))
     }, 600)
     return () => clearTimeout(timer)
   }, [budget, synced])
@@ -478,6 +483,11 @@ export default function Budget() {
           <div className="flex items-center gap-2">
             <Wallet size={22} style={{ color: t.headerText }} />
             <h1 className="text-2xl font-bold" style={{ color: t.headerText }}>Family Budget</h1>
+            <span className="text-xs font-medium opacity-80" style={{ color: t.headerText }}>
+              {syncStatus === 'loading' && '⟳'}
+              {syncStatus === 'ok'      && '✓'}
+              {syncStatus === 'error'   && '✗ sync error'}
+            </span>
           </div>
           <button onClick={() => setShowSettings(true)} style={{ color: t.headerText }} className="p-1 opacity-70 hover:opacity-100">
             <Settings size={20} />
