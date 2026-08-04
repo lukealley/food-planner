@@ -7,9 +7,10 @@ import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 
 // ─── Wells Fargo CSV parser ────────────────────────────────────────────────────
-// Handles two WF export formats:
-//   Checking (5 cols):     Date, Amount, *, *, Description
-//   Credit card (7 cols):  Transaction Date, Post Date, Description, Category, Type, Amount, Memo
+// Detected formats from actual WF exports:
+//   Checking new  (5 cols): DATE, DESCRIPTION, AMOUNT, CHECK #, STATUS
+//   Credit card   (7 cols): Transaction Date, Post Date, Description, Category, Type, Amount, Memo
+//   Checking old  (5 cols): Date, Amount, *, *, Description  (legacy — kept as fallback)
 
 function parseCSVLine(line) {
   const cols = []
@@ -24,76 +25,112 @@ function parseCSVLine(line) {
   return cols
 }
 
+function cleanStr(s) {
+  return (s || '').replace(/"/g, '').replace(/^﻿/, '').trim()
+}
+
 function mmddyyyyToISO(raw) {
-  // strip any stray quotes and whitespace
-  const s = raw.replace(/"/g, '').trim()
+  const s = cleanStr(raw)
   const parts = s.split('/')
   if (parts.length !== 3) return null
   const [m, d, y] = parts
   if (!y || y.length !== 4) return null
-  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+  const mn = Number(m), dn = Number(d), yn = Number(y)
+  if (!mn || !dn || !yn) return null
+  return `${y}-${String(mn).padStart(2, '0')}-${String(dn).padStart(2, '0')}`
+}
+
+function parseAmount(raw) {
+  return parseFloat(cleanStr(raw).replace(/,/g, ''))
+}
+
+// Detect which WF format a header row indicates
+// Returns: 'checking-new' | 'credit' | 'checking-old' | null (no header)
+function detectFormatFromHeader(headerLine) {
+  const cols = parseCSVLine(headerLine).map(c => cleanStr(c).toUpperCase())
+  if (cols[0] === 'DATE' && cols[1] === 'DESCRIPTION') return 'checking-new'
+  if (cols[0].includes('TRANSACTION') || cols[0] === 'TRANSACTION DATE') return 'credit'
+  if (cols[0] === 'DATE' && cols[1] === 'AMOUNT') return 'checking-old'
+  return null
 }
 
 function isHeaderLine(line) {
-  return /^\s*"?(transaction\s+date|date|post\s+date)/i.test(line)
+  const s = cleanStr(line).replace(/^"+/, '')
+  return /^(transaction\s+date|date|post\s+date|description)/i.test(s)
 }
 
 function parseWellsFargoCSV(text) {
-  // Strip UTF-8 BOM if present
   const clean = text.replace(/^﻿/, '')
-  const lines = clean.split(/\r?\n/).filter(l => l.trim() && !isHeaderLine(l))
+  const allLines = clean.split(/\r?\n/)
 
-  if (lines.length === 0) return { txns: [], format: null }
+  // Find the header line if present
+  let format = null
+  for (const line of allLines) {
+    if (!line.trim()) continue
+    const detected = detectFormatFromHeader(line)
+    if (detected) { format = detected; break }
+    break // first non-empty line is either a header or data; stop looking
+  }
 
-  // Detect format by first data row's column count
-  const sampleCols = parseCSVLine(lines[0])
-  const isCreditCard = sampleCols.length >= 6
+  const dataLines = allLines.filter(l => l.trim() && !isHeaderLine(l))
+  const firstRaw = allLines.find(l => l.trim()) || ''
+
+  if (dataLines.length === 0) return { txns: [], format, firstRaw, colCount: 0 }
+
+  // If format wasn't determined from header, sniff from first data row
+  if (!format) {
+    const sample = parseCSVLine(dataLines[0])
+    if (sample.length >= 7) format = 'credit'
+    else if (sample.length >= 5) {
+      // Distinguish new vs old by whether col[1] looks like a number
+      format = isNaN(parseAmount(sample[1])) ? 'checking-new' : 'checking-old'
+    }
+  }
 
   const txns = []
-  for (const line of lines) {
+  for (const line of dataLines) {
     const cols = parseCSVLine(line)
-
     let rawDate, rawAmount, rawDesc
 
-    if (isCreditCard && cols.length >= 6) {
-      // "Transaction Date","Post Date","Description","Category","Type","Amount","Memo"
-      rawDate   = cols[0]
-      rawDesc   = cols[2]
-      rawAmount = cols[5]
-    } else if (!isCreditCard && cols.length >= 5) {
-      // "Date","Amount","*","*","Description"
-      rawDate   = cols[0]
-      rawAmount = cols[1]
-      rawDesc   = cols[4]
+    if (format === 'checking-new' && cols.length >= 3) {
+      // DATE, DESCRIPTION, AMOUNT, CHECK#, STATUS
+      rawDate = cols[0]; rawDesc = cols[1]; rawAmount = cols[2]
+    } else if (format === 'credit' && cols.length >= 6) {
+      // Transaction Date, Post Date, Description, Category, Type, Amount, Memo
+      rawDate = cols[0]; rawDesc = cols[2]; rawAmount = cols[5]
+    } else if (format === 'checking-old' && cols.length >= 5) {
+      // Date, Amount, *, *, Description
+      rawDate = cols[0]; rawAmount = cols[1]; rawDesc = cols[4]
     } else {
       continue
     }
 
-    const amount = parseFloat(rawAmount)
+    const amount = parseAmount(rawAmount)
     if (isNaN(amount)) continue
 
     const date = mmddyyyyToISO(rawDate)
     if (!date) continue
 
-    const description = rawDesc.replace(/"/g, '').replace(/\s+/g, ' ').trim()
-    if (!description || description === '*') continue
+    // Collapse the excessive whitespace WF puts in descriptions
+    const description = cleanStr(rawDesc).replace(/\s{2,}/g, ' ')
+    if (!description) continue
 
     const id = `${date}|${amount}|${description}`.replace(/\s/g, '_')
     txns.push({ id, date, description, amount: Math.abs(amount), isCredit: amount > 0, categoryId: null, source: 'csv' })
   }
 
-  return { txns, format: isCreditCard ? 'credit' : 'checking' }
+  return { txns, format, firstRaw, colCount: parseCSVLine(dataLines[0]).length }
 }
 
 // ─── Auto-categorise ──────────────────────────────────────────────────────────
 
 const KEYWORD_MAP = {
-  'Groceries':     ['SAFEWAY', 'KROGER', 'KING SOOPERS', 'COSTCO', 'WALMART', 'WHOLE FOODS', 'TRADER JOE', 'SPROUTS', 'ALBERTSONS', 'SMITHS', 'WINCO', 'ALDI', 'NATURAL GROCERS', 'GROCERY'],
-  'Dining Out':    ['MCDONALD', 'STARBUCKS', 'CHIPOTLE', 'SUBWAY', 'DOMINO', 'PIZZA', 'BURGER', 'TACO', 'WENDY', 'CHICK-FIL', 'PANERA', 'DOORDASH', 'GRUBHUB', 'UBER EATS', 'RESTAURANT', 'CAFE ', 'DINER', 'SUSHI', 'PANDA', 'SONIC ', 'CULVER', 'IN-N-OUT', 'FIVE GUYS', 'JIMMY JOHN'],
-  'Gas':           ['SHELL', 'CHEVRON', 'EXXON', 'BP GAS', 'CONOCO', 'SINCLAIR', 'CIRCLE K', '76 GAS', 'FUEL', 'PILOT TRAVEL', 'LOVES TRAVEL', 'MAVERICK'],
-  'Entertainment': ['NETFLIX', 'SPOTIFY', 'HULU', 'DISNEY', 'AMC THEATRE', 'REGAL', 'MOVIE', 'STEAM ', 'NINTENDO', 'TICKETMASTER', 'APPLE.COM/BILL', 'YOUTUBE', 'PRIME VIDEO', 'HBO', 'PLAYSTATION'],
+  'Groceries':     ['SAFEWAY', 'KROGER', 'KING SOOPERS', 'COSTCO', 'WALMART', 'WHOLE FOODS', 'TRADER JOE', 'SPROUTS', 'ALBERTSONS', 'SMITHS', 'WINCO', 'ALDI', 'NATURAL GROCERS', 'GROCERY OUTLET', 'GROCERY'],
+  'Dining Out':    ['MCDONALD', 'STARBUCKS', 'CHIPOTLE', 'SUBWAY', 'DOMINO', 'PIZZA', 'BURGER', 'TACO', 'WENDY', 'CHICK-FIL', 'PANERA', 'DOORDASH', 'GRUBHUB', 'UBER EATS', 'RESTAURANT', 'CAFE ', 'DINER', 'SUSHI', 'PANDA', 'SONIC ', 'CULVER', 'IN-N-OUT', 'FIVE GUYS', 'JIMMY JOHN', 'SQ *', 'SLUGS'],
+  'Gas':           ['SHELL', 'CHEVRON', 'EXXON', 'BP GAS', 'CONOCO', 'SINCLAIR', 'CIRCLE K', '76 GAS', 'FUEL MART', 'PILOT TRAVEL', 'LOVES TRAVEL', 'MAVERICK', 'RONS OIL', 'MW EXPRESS'],
+  'Entertainment': ['NETFLIX', 'SPOTIFY', 'HULU', 'DISNEY PLUS', 'DISNEY+', 'AMC THEATRE', 'REGAL', 'MOVIE', 'STEAM ', 'NINTENDO', 'TICKETMASTER', 'APPLE.COM/BILL', 'YOUTUBE', 'PRIME VIDEO', 'HBO', 'PLAYSTATION'],
   'Shopping':      ['AMAZON', 'EBAY', 'ETSY', 'NORDSTROM', 'MACYS', 'GAP ', 'OLD NAVY', 'TJ MAXX', 'ROSS ', 'MARSHALLS', 'HOME DEPOT', 'LOWES', 'IKEA', 'BED BATH', "DICK'S SPORT", 'BEST BUY', 'APPLE STORE'],
-  'Bills & Utils': ['COMCAST', 'XFINITY', 'AT&T', 'VERIZON', 'T-MOBILE', 'XCEL ENERGY', 'CENTURYLINK', 'DISH NETWORK', 'DIRECTV', 'INSURANCE', 'ELECTRIC', 'ALLSTATE', 'PROGRESSIVE', 'GEICO', 'STATE FARM'],
+  'Bills & Utils': ['COMCAST', 'XFINITY', 'AT&T', 'VERIZON', 'T-MOBILE', 'XCEL ENERGY', 'CENTURYLINK', 'DISH NETWORK', 'DIRECTV', 'INSURANCE', 'ELECTRIC', 'ALLSTATE', 'PROGRESSIVE', 'GEICO', 'STATE FARM', 'NORTHWESTERN MU', 'CTLP', 'SERVICEWO', 'BYUI', 'CELL PHONE'],
   'Healthcare':    ['WALGREENS', 'CVS PHARMACY', 'RITE AID', 'HOSPITAL', 'CLINIC', 'PHARMACY', 'DENTAL', 'URGENT CARE', 'OPTOMETRIST', 'KAISER'],
 }
 
@@ -380,10 +417,12 @@ export default function Budget() {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const { txns: parsed, format } = parseWellsFargoCSV(e.target.result)
+        const { txns: parsed, format, firstRaw, colCount } = parseWellsFargoCSV(e.target.result)
 
         if (parsed.length === 0) {
-          setUploadError(`No transactions found. Detected format: ${format ?? 'unknown'}. Make sure this is a Wells Fargo CSV export (checking or credit card).`)
+          setUploadError(
+            `No transactions parsed (format: ${format ?? 'unknown'}, ${colCount} columns).\nFirst line: ${(firstRaw || '').slice(0, 120)}`
+          )
           setProcessing(false)
           return
         }
