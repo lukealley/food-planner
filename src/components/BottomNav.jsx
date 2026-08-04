@@ -1,14 +1,15 @@
 import { NavLink } from 'react-router-dom'
-import { Home, UtensilsCrossed, CalendarDays, ShoppingBag, User, Brain } from 'lucide-react'
+import { Home, UtensilsCrossed, CalendarDays, User, Brain, Wallet } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
 
 const tabs = [
-  { to: '/',         icon: Home,            label: 'Today'   },
-  { to: '/log',      icon: UtensilsCrossed, label: 'Log'     },
-  { to: '/corcard',  icon: Brain,           label: 'Cor-Card' },
-  { to: '/history',  icon: CalendarDays,    label: 'History' },
-  { to: '/profile',  icon: User,            label: 'Profile' },
+  { to: '/',        icon: Home,            label: 'Today'   },
+  { to: '/log',     icon: UtensilsCrossed, label: 'Log'     },
+  { to: '/corcard', icon: Brain,           label: 'Cor-Card' },
+  { to: '/budget',  icon: Wallet,          label: 'Budget'  },
+  { to: '/history', icon: CalendarDays,    label: 'History' },
+  { to: '/profile', icon: User,            label: 'Profile' },
 ]
 
 export default function BottomNav() {
@@ -24,14 +25,14 @@ export default function BottomNav() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+              `flex-1 flex flex-col items-center gap-0.5 py-1.5 transition-colors ${
                 isActive ? '' : 'text-gray-400'
               }`
             }
             style={({ isActive }) => isActive ? { color: t.navActive } : {}}
           >
-            <Icon size={22} />
-            {label}
+            <Icon size={20} />
+            <span style={{ fontSize: 9, fontWeight: 500 }}>{label}</span>
           </NavLink>
         ))}
       </div>

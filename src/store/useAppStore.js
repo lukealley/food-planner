@@ -2,6 +2,17 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_WEIGHTS } from '../utils/score.js'
 
+const DEFAULT_BUDGET_CATEGORIES = [
+  { id: 1, name: 'Groceries',     limit: 800,  color: '#22c55e', emoji: '🛒' },
+  { id: 2, name: 'Dining Out',    limit: 400,  color: '#f97316', emoji: '🍽️' },
+  { id: 3, name: 'Gas',           limit: 200,  color: '#3b82f6', emoji: '⛽' },
+  { id: 4, name: 'Entertainment', limit: 150,  color: '#8b5cf6', emoji: '🎬' },
+  { id: 5, name: 'Shopping',      limit: 300,  color: '#ec4899', emoji: '🛍️' },
+  { id: 6, name: 'Bills & Utils', limit: 500,  color: '#6366f1', emoji: '💡' },
+  { id: 7, name: 'Healthcare',    limit: 200,  color: '#ef4444', emoji: '🏥' },
+  { id: 8, name: 'Other',         limit: 250,  color: '#6b7280', emoji: '📦' },
+]
+
 const defaultHisProfile = {
   name: 'Luke',
   currentWeight: '',
@@ -200,6 +211,52 @@ const useAppStore = create(
         get()._updateUser('hers', (u) => ({
           ...u,
           cycleData: { ...u.cycleData, ...updates },
+        })),
+
+      // Shared family budget
+      budget: {
+        categories: DEFAULT_BUDGET_CATEGORIES,
+        transactions: [],
+        // transaction: { id, date:'YYYY-MM-DD', description, amount, categoryId, isCredit, source:'csv'|'manual' }
+      },
+      importTransactions: (txns) =>
+        set((s) => {
+          const existingIds = new Set(s.budget.transactions.map(t => t.id))
+          const fresh = txns.filter(t => !existingIds.has(t.id))
+          return { budget: { ...s.budget, transactions: [...s.budget.transactions, ...fresh] } }
+        }),
+      deleteTransaction: (id) =>
+        set((s) => ({
+          budget: { ...s.budget, transactions: s.budget.transactions.filter(t => t.id !== id) }
+        })),
+      categorizeTransaction: (id, categoryId) =>
+        set((s) => ({
+          budget: {
+            ...s.budget,
+            transactions: s.budget.transactions.map(t => t.id === id ? { ...t, categoryId } : t),
+          }
+        })),
+      addBudgetCategory: (cat) =>
+        set((s) => ({
+          budget: {
+            ...s.budget,
+            categories: [...s.budget.categories, { ...cat, id: Date.now() }],
+          }
+        })),
+      updateBudgetCategory: (id, updates) =>
+        set((s) => ({
+          budget: {
+            ...s.budget,
+            categories: s.budget.categories.map(c => c.id === id ? { ...c, ...updates } : c),
+          }
+        })),
+      deleteBudgetCategory: (id) =>
+        set((s) => ({
+          budget: {
+            ...s.budget,
+            categories: s.budget.categories.filter(c => c.id !== id),
+            transactions: s.budget.transactions.map(t => t.categoryId === id ? { ...t, categoryId: null } : t),
+          }
         })),
 
       // Shared family data

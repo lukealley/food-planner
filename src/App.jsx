@@ -9,6 +9,7 @@ import DinnerDatabase from './pages/DinnerDatabase'
 import Profile from './pages/Profile'
 import MealSuggestions from './pages/MealSuggestions'
 import CorCard from './pages/CorCard'
+import Budget from './pages/Budget'
 import StreakBadge from './components/StreakBadge'
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/profile"     element={<Profile />} />
           <Route path="/suggestions" element={<MealSuggestions />} />
           <Route path="/corcard"     element={<CorCard />} />
+          <Route path="/budget"      element={<Budget />} />
         </Routes>
         <BottomNav />
       </div>
