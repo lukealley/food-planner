@@ -258,6 +258,25 @@ const useAppStore = create(
             transactions: s.budget.transactions.map(t => t.categoryId === id ? { ...t, categoryId: null } : t),
           }
         })),
+      // Merge remote budget state into local (union transactions, remote categories win)
+      mergeBudget: (remote) =>
+        set((s) => {
+          if (!remote) return s
+          const localById = Object.fromEntries(s.budget.transactions.map(t => [t.id, t]))
+          const remoteById = Object.fromEntries((remote.transactions ?? []).map(t => [t.id, t]))
+          // Union: local wins for categorization, remote fills in missing txns
+          const allIds = new Set([...Object.keys(localById), ...Object.keys(remoteById)])
+          const transactions = [...allIds].map(id => {
+            const local  = localById[id]
+            const remote = remoteById[id]
+            if (!local)  return remote
+            if (!remote) return local
+            // Prefer whichever has a categoryId set
+            return local.categoryId != null ? local : { ...local, categoryId: remote.categoryId }
+          })
+          const categories = remote.categories ?? s.budget.categories
+          return { budget: { ...s.budget, categories, transactions } }
+        }),
 
       // Shared family data
       dinners: [

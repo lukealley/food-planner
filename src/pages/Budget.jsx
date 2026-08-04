@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Wallet, ChevronLeft, ChevronRight, Upload, Trash2, Plus,
   ChevronDown, ChevronUp, Settings, X, Check, Loader2,
@@ -374,6 +374,7 @@ export default function Budget() {
     activeUser, budget,
     importTransactions, deleteTransaction, categorizeTransaction,
     addBudgetCategory, updateBudgetCategory, deleteBudgetCategory,
+    mergeBudget,
   } = useAppStore()
 
   const t = themes[activeUser]
@@ -386,7 +387,30 @@ export default function Budget() {
   const [processing,   setProcessing]   = useState(false)
   const [uploadError,  setUploadError]  = useState('')
   const [reviewIds,    setReviewIds]    = useState(null) // Set of IDs to review
+  const [synced,       setSynced]       = useState(false)
   const fileRef = useRef()
+
+  // On mount: pull remote budget and merge into local store
+  useEffect(() => {
+    fetch('/api/budget')
+      .then(r => r.ok ? r.json() : null)
+      .then(remote => { if (remote) mergeBudget(remote) })
+      .catch(() => {})
+      .finally(() => setSynced(true))
+  }, []) // eslint-disable-line
+
+  // After any budget change (post-sync): push full state to server (debounced)
+  useEffect(() => {
+    if (!synced) return
+    const timer = setTimeout(() => {
+      fetch('/api/budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(budget),
+      }).catch(() => {})
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [budget, synced])
 
   const isCurrentMonth = viewMonth === currentMonthYM()
 
