@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   if (!BASE || !TOKEN) {
-    if (req.method === 'GET') return res.status(200).json(null)
+    if (req.method === 'GET') return res.status(200).json({ _error: 'UPSTASH env vars not set' })
     return res.status(200).json({ ok: true })
   }
 
