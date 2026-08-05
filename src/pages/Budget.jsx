@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import {
   Wallet, ChevronLeft, ChevronRight, Upload, Trash2, Plus,
-  ChevronDown, ChevronUp, Settings, X, Check, Loader2,
+  ChevronDown, ChevronUp, Settings, X, Check, Loader2, RefreshCw,
 } from 'lucide-react'
 import useAppStore from '../store/useAppStore'
 import { themes } from '../themes'
@@ -387,35 +387,32 @@ export default function Budget() {
   const [processing,   setProcessing]   = useState(false)
   const [uploadError,  setUploadError]  = useState('')
   const [reviewIds,    setReviewIds]    = useState(null) // Set of IDs to review
-  const [synced,       setSynced]       = useState(false)
-  const [syncStatus,   setSyncStatus]   = useState('loading') // 'loading'|'ok'|'error'
+  const [syncStatus, setSyncStatus] = useState('idle') // 'idle'|'syncing'|'ok'|'error'
   const fileRef = useRef()
 
-  // On mount: pull remote budget and merge into local store
-  useEffect(() => {
-    fetch('/api/budget')
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
-      .then(remote => { if (remote) mergeBudget(remote) })
-      .catch(() => setSyncStatus('error'))
-      .finally(() => setSynced(true))
-  }, []) // eslint-disable-line
+  async function handleSync() {
+    setSyncStatus('syncing')
+    try {
+      // Pull from server first
+      const getRes = await fetch('/api/budget')
+      if (!getRes.ok) throw new Error(`GET ${getRes.status}`)
+      const remote = await getRes.json()
+      if (remote && !remote._error) mergeBudget(remote)
 
-  // After any budget change (post-sync): push full state to server (debounced)
-  useEffect(() => {
-    if (!synced) return
-    setSyncStatus('loading')
-    const timer = setTimeout(() => {
-      fetch('/api/budget', {
+      // Push current (merged) state to server
+      const current = useAppStore.getState().budget
+      const postRes = await fetch('/api/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(budget),
+        body: JSON.stringify(current),
       })
-        .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
-        .then(() => setSyncStatus('ok'))
-        .catch(() => setSyncStatus('error'))
-    }, 600)
-    return () => clearTimeout(timer)
-  }, [budget, synced])
+      if (!postRes.ok) throw new Error(`POST ${postRes.status}`)
+      setSyncStatus('ok')
+    } catch (e) {
+      console.error('sync error', e)
+      setSyncStatus('error')
+    }
+  }
 
   const isCurrentMonth = viewMonth === currentMonthYM()
 
@@ -483,15 +480,26 @@ export default function Budget() {
           <div className="flex items-center gap-2">
             <Wallet size={22} style={{ color: t.headerText }} />
             <h1 className="text-2xl font-bold" style={{ color: t.headerText }}>Family Budget</h1>
-            <span className="text-xs font-medium opacity-80" style={{ color: t.headerText }}>
-              {syncStatus === 'loading' && '⟳'}
-              {syncStatus === 'ok'      && '✓'}
-              {syncStatus === 'error'   && '✗ sync error'}
-            </span>
           </div>
-          <button onClick={() => setShowSettings(true)} style={{ color: t.headerText }} className="p-1 opacity-70 hover:opacity-100">
-            <Settings size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSync}
+              disabled={syncStatus === 'syncing'}
+              style={{ color: t.headerText }}
+              className="p-1 opacity-70 hover:opacity-100 disabled:opacity-40 flex items-center gap-1"
+              title="Sync with cloud"
+            >
+              {syncStatus === 'syncing'
+                ? <Loader2 size={18} className="animate-spin" />
+                : <RefreshCw size={18} className={syncStatus === 'ok' ? 'opacity-100' : ''} />
+              }
+              {syncStatus === 'ok'    && <span className="text-xs font-semibold">✓</span>}
+              {syncStatus === 'error' && <span className="text-xs font-semibold">✗</span>}
+            </button>
+            <button onClick={() => setShowSettings(true)} style={{ color: t.headerText }} className="p-1 opacity-70 hover:opacity-100">
+              <Settings size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Month nav */}
